@@ -1,0 +1,18 @@
+services:
+  postgres:
+    build:
+      context: .
+      dockerfile: postgres.dockerfile
+    image: "postgres"
+    container_name: ${DB_CONTAINER_NAME}
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+       - barberdb:/data/postgres-barber
+    ports:
+      - "5432:5432"
+    restart: always
+volumes:
+    barberdb:
