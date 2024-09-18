@@ -1,4 +1,4 @@
-FROM postgres
+FROM node:20
 
 COPY package*.json ./
   
@@ -6,4 +6,8 @@ RUN npm install
 
 COPY .env ./
 
-COPY *.sql /docker-entrypoint-initdb.d/
+COPY . .
+
+RUN npm run build
+
+CMD [ "npm", "run", "start:dev" ]

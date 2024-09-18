@@ -1,18 +1,46 @@
+version: '3.9'
+
 services:
-  postgres:
-    build:
-      context: .
-      dockerfile: postgres.dockerfile
-    image: "postgres"
+  db:
+    image: postgres:16.4
     container_name: ${DB_CONTAINER_NAME}
     environment:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-       - barberdb:/data/postgres-barber
+       - barberdb:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - ${DB_PORT}:${DB_PORT}
+    expose:
+      - ${DB_PORT}
     restart: always
+
+  # app: 
+  #   build: 
+  #     context: . 
+  #     dockerfile: Dockerfile 
+  #   container_name: nest-barber
+  #   environment: 
+  #     - PORT=${PORT} 
+  #   ports: 
+  #     - '3000:3000' 
+  #   depends_on: 
+  #     - db 
+  #   volumes:
+  #     - ./src:/app/src 
+
+  # pgadmin:
+  #   image: dpage/pgadmin4 
+  #   restart: always 
+  #   container_name: nest-pgadmin4 
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=admin@admin.com 
+  #     - PGADMIN_DEFAULT_PASSWORD=pgadmin4 
+  #   ports: 
+  #     - '5050:80' 
+  #   depends_on: 
+  #     - db
+
 volumes:
     barberdb:
