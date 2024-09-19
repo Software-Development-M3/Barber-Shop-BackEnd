@@ -1,7 +1,7 @@
 import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity({ name: 'user' })
-export class User {
+@Entity({ name: 'customer' })
+export class Customer {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
@@ -11,9 +11,9 @@ export class User {
     @Column({ type: 'varchar', length: 40 })
     email: string;
 
-    @Column({ type: 'varchar'})
+    @Column({ type: 'varchar' })
     password: string;
 
-    @Column({type: 'varchar', length: 10})
+    @Column({type: 'varchar', length: 10 })
     telephone: number;
 }
