@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsPhoneNumber, IsString } from "class-validator";
+import { PHONE_LOCATION } from "src/utils/constants";
 
 export class CreateShopDto {
     @IsNotEmpty()
@@ -13,6 +14,6 @@ export class CreateShopDto {
     location: string;
 
     @IsNotEmpty()
-    @IsPhoneNumber("TH")
+    @IsPhoneNumber(PHONE_LOCATION)
     telephone: number;
 }

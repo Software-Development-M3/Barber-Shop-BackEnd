@@ -5,10 +5,10 @@ export class Customer {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column({ type: 'varchar', length: 30 })
-    name: string;
-
     @Column({ type: 'varchar', length: 40 })
+    fullname: string;
+
+    @Column({ type: 'varchar', length: 50 })
     email: string;
 
     @Column({ type: 'varchar' })
