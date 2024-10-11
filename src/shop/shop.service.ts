@@ -42,15 +42,55 @@ export class ShopService {
   }
 
   async update(id: string, updateShopDto: UpdateShopDto): Promise<Shop> {
-    const shop = await this.shopRepository.findOne({ where: { id } });
+    const { barbers, services, ...shopData } = updateShopDto;
+  
+    const shop = await this.shopRepository.findOne({ where: { id }, relations: ['barbers', 'services'] });
     if (!shop) {
       throw new NotFoundException('Shop not found');
     }
   
-    Object.assign(shop, updateShopDto);
+    Object.assign(shop, shopData);
+    const updatedShop = await this.shopRepository.save(shop);
   
-    return this.shopRepository.save(shop);
+    if (barbers) {
+      const barberIds = barbers.map(barber => barber.name);
+      const barbersToRemove = shop.barbers.filter(barber => !barberIds.includes(barber.name));
+      if (barbersToRemove.length > 0) {
+        await this.barberRepository.remove(barbersToRemove);
+      }
+      const updatedBarbers = barbers.map(barberDto => {
+        const existingBarber = shop.barbers.find(barber => barber.name === barberDto.name);
+        if (existingBarber) {
+          Object.assign(existingBarber, barberDto);
+          return existingBarber;
+        } else {
+          return this.barberRepository.create({ ...barberDto, shop: updatedShop });
+        }
+      });
+      await this.barberRepository.save(updatedBarbers);
+    }
+  
+    if (services) {
+      const serviceIds = services.map(service => service.name);
+      const servicesToRemove = shop.services.filter(service => !serviceIds.includes(service.name));
+      if (servicesToRemove.length > 0) {
+        await this.serviceRepository.remove(servicesToRemove);
+      }
+      const updatedServices = services.map(serviceDto => {
+        const existingService = shop.services.find(service => service.name === serviceDto.name);
+        if (existingService) {
+          Object.assign(existingService, serviceDto);
+          return existingService;
+        } else {
+          return this.serviceRepository.create({ ...serviceDto, shop: updatedShop });
+        }
+      });
+      await this.serviceRepository.save(updatedServices);
+    }
+  
+    return updatedShop;
   }
+  
   
 
   async addService(shopId: string, createServiceDto: CreateServiceDto): Promise<Service> {
