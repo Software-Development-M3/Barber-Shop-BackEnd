@@ -1,41 +1,91 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateShopDto } from './dto/create-shop.dto';
+import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Shop } from './entities/shop.entity';
+import { Barber } from './entities/barber.entity'; 
+import { Service } from './entities/service.entity';
 import { Repository } from 'typeorm';
 
 @Injectable()
 export class ShopService {
   constructor(
     @InjectRepository(Shop) private readonly shopRepository: Repository<Shop>,
+    @InjectRepository(Service) private readonly serviceRepository: Repository<Service>,
+    @InjectRepository(Barber) private readonly barberRepository: Repository<Barber>, 
   ) {}
 
   async create(createShopDto: CreateShopDto): Promise<Shop> {
-    const shop = this.shopRepository.create(createShopDto);
-    
-    return await this.shopRepository.save(shop);
-  }
+    const { barbers, services, ...shopData } = createShopDto;
 
-  async findAll(): Promise<Shop[]> {
-    return await this.shopRepository.find();
-  }
+    const shop = this.shopRepository.create(shopData);
+    const savedShop = await this.shopRepository.save(shop);
 
-  async findOne(id: string): Promise<Shop | null> {
-    return await this.shopRepository.findOne({ where: { id } });
+    if (barbers && barbers.length > 0) {
+      const barberEntities = barbers.map((barberDto) => {
+        const barber = this.barberRepository.create({ ...barberDto, shop: savedShop });
+        return barber;
+      });
+      await this.barberRepository.save(barberEntities);
+    }
+
+    if (services && services.length > 0) {
+      const serviceEntities = services.map((serviceDto) => {
+        const service = this.serviceRepository.create({ ...serviceDto, shop: savedShop });
+        return service;
+      });
+      await this.serviceRepository.save(serviceEntities);
+    }
+
+    return savedShop;
   }
 
   async update(id: string, updateShopDto: UpdateShopDto): Promise<Shop> {
-    const shop = await this.findOne(id);
+    const shop = await this.shopRepository.findOne({ where: { id } });
     if (!shop) {
-      throw new NotFoundException();
+      throw new NotFoundException('Shop not found');
+    }
+  
+    Object.assign(shop, updateShopDto);
+  
+    return this.shopRepository.save(shop);
+  }
+  
+
+  async addService(shopId: string, createServiceDto: CreateServiceDto): Promise<Service> {
+    const shop = await this.shopRepository.findOne({ where: { id: shopId } });
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
     }
 
-    Object.assign(shop, updateShopDto);
-    
-    return await this.shopRepository.save(shop);
+    const service = this.serviceRepository.create({ ...createServiceDto, shop });
+    return this.serviceRepository.save(service);
   }
 
+  async removeService(shopId: string, serviceId: string): Promise<void> {
+    const shop = await this.shopRepository.findOne({ where: { id: shopId } });
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    const service = await this.serviceRepository.findOne({ where: { id: serviceId, shop } });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    await this.serviceRepository.remove(service);
+  }
+
+  async findAll(): Promise<Shop[]> {
+    return await this.shopRepository.find({ relations: ['barbers' , 'services']}); 
+  }
+
+  async findOne(id: string): Promise<Shop | null> {
+    return await this.shopRepository.findOne({ where: { id }, relations: ['barbers','services'] }); 
+  }
+
+  
   async remove(id: string): Promise<Shop> {
     const shop = await this.findOne(id);
     if (!shop) {
@@ -44,4 +94,20 @@ export class ShopService {
 
     return await this.shopRepository.remove(shop);
   }
+
+  async removeBarber(shopId: string, barberId: string): Promise<void> {
+    const shop = await this.shopRepository.findOne({ where: { id: shopId }, relations: ['barbers'] });
+    if (!shop) {
+      throw new NotFoundException('Shop not found');
+    }
+
+    const barber = await this.barberRepository.findOne({ where: { id: barberId, shop } });
+    if (!barber) {
+      throw new NotFoundException('Barber not found in this shop');
+    }
+
+    await this.barberRepository.remove(barber);
+  }
+
+
 }
