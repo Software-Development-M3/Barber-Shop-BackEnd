@@ -26,7 +26,6 @@ export class ShopController {
   return this.shopService.update(id, updateShopDto);
   }
 
-
   @Get()
   findAll() {
     return this.shopService.findAll();
@@ -45,5 +44,10 @@ export class ShopController {
   @Delete(':shopId/service/:serviceId')
   removeService(@Param('shopId') shopId: string, @Param('serviceId') serviceId: string) {
     return this.shopService.removeService(shopId, serviceId);
+  }
+
+  @Delete(':shopId/barber/:barberId')
+  removeBarber(@Param('shopId') shopId: string, @Param('barberId') barberId: string) {
+    return this.shopService.removeBarber(shopId, barberId);
   }
 }
