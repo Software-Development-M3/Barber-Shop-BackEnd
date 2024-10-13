@@ -1,5 +1,8 @@
-import { IsNotEmpty, IsPhoneNumber, IsString } from "class-validator";
+import { IsNotEmpty, IsPhoneNumber, IsString, ValidateNested, IsArray } from "class-validator";
+import { Type } from "class-transformer";
 import { PHONE_LOCATION } from "src/utils/constants";
+import { CreateBarberDto } from "./create-barber.dto";
+import { CreateServiceDto } from './create-service.dto';
 
 export class CreateShopDto {
     @IsNotEmpty()
@@ -16,4 +19,23 @@ export class CreateShopDto {
     @IsNotEmpty()
     @IsPhoneNumber(PHONE_LOCATION)
     telephone: number;
+
+    @IsArray()
+    tags: [];
+
+    @IsString()
+    timeOpen: string;
+
+    @IsString()
+    timeClose: string;
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreateBarberDto)
+    barbers: CreateBarberDto[];
+
+    @IsArray()
+    @ValidateNested({ each: true })
+    @Type(() => CreateServiceDto)
+    services: CreateServiceDto[];
 }
