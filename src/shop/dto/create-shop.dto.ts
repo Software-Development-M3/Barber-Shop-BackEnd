@@ -21,6 +21,15 @@ export class CreateShopDto {
     telephone: number;
 
     @IsArray()
+    tags: [];
+
+    @IsString()
+    timeOpen: string;
+
+    @IsString()
+    timeClose: string;
+
+    @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateBarberDto)
     barbers: CreateBarberDto[];

@@ -19,6 +19,15 @@ export class Shop {
   @Column({ type: 'varchar', length: 20 })
   telephone: number;
 
+  @Column({ type: 'varchar', length: 100 })
+  tags: [];
+
+  @Column({ type: 'varchar', length: 20 })
+  timeOpen: string;
+
+  @Column({ type: 'varchar', length: 20 })
+  timeClose: string;
+
   @OneToMany(() => Barber, (barber) => barber.shop)
   barbers: Barber[];
 

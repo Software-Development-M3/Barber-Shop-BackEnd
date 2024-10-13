@@ -23,6 +23,18 @@ export class UpdateShopDto {
 
     @IsOptional()
     @IsArray()
+    tags?: [];
+
+    @IsOptional()
+    @IsString()
+    timeOpen?: string;
+
+    @IsOptional()
+    @IsString()
+    timeClose?: string;
+
+    @IsOptional()
+    @IsArray()
     @ValidateNested({ each: true })
     @Type(() => CreateBarberDto)
     barbers?: CreateBarberDto[];
