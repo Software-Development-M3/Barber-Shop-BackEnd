@@ -125,6 +125,10 @@ export class ShopService {
     return await this.shopRepository.findOne({ where: { id }, relations: ['barbers','services'] }); 
   }
 
+  async findbyname(name: string): Promise<Shop | null>{
+    return await this.shopRepository.findOne({ where: { name },relations: ['barbers','services'] });
+  }
+
   
   async remove(id: string): Promise<Shop> {
     const shop = await this.findOne(id);

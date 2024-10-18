@@ -36,6 +36,11 @@ export class ShopController {
     return this.shopService.findOne(id);
   }
 
+  @Get('search/name/:name')
+  findbyname(@Param('name') name: string) {
+    return this.shopService.findbyname(name);
+  }
+
   @Delete('delete/id/:id')
   remove(@Param('id') id: string) {
     return this.shopService.remove(id);
