@@ -135,22 +135,118 @@ export class BookingService {
   
     return savedBooking;
   }
-  
-  async findAll(): Promise<Booking[]> {
-    return await this.bookingRepository.find();
+
+  async getBooking(id: string): Promise<any> {
+    const booking = await this.bookingRepository.findOne({
+      where: { bookid: id },
+      relations: [
+        'shop', 
+        'barber', 
+        'customerServices', 
+        'customerServices.service', 
+        'customerServices.hairCutDescription', 
+        'customerServices.hairWashDescription', 
+        'customerServices.hairDyeDescription'
+      ],
+    });
+
+    if (!booking) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    return this.transformToResponse(booking);
   }
+
+  async findAll(reqid : string): Promise<any[]> {
+    const customer = await this.customerRepository.findOne({ where: { id : reqid}});
+    const bookings = await this.bookingRepository.find({ where : { customer : customer},
+      relations: [
+        'shop', 
+        'barber', 
+        'customerServices', 
+        'customerServices.service', 
+        'customerServices.hairCutDescription', 
+        'customerServices.hairWashDescription', 
+        'customerServices.hairDyeDescription'
+      ],
+    });
+
+    return bookings.map(this.transformToResponse);
+  }
+
+  private transformToResponse(booking: Booking): any {
+    const response = {
+      bookingId: booking.bookid,
+      shopId: booking.shop.id,
+      shopName: booking.shop.name,
+      barberName: booking.barber.name,
+      price: booking.totalPrice,
+      duration : booking.totalDuration,
+      date: booking.startTime.split('T')[0], // Assuming the date format is 'YYYY-MM-DDTHH:MM:SS'
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      services: {
+        haircut: {},
+        hairWash: {},
+        hairDye: {},
+      },
+    };
+
+    for (const customerService of booking.customerServices) {
+      const serviceType = customerService.service.serviceType.name.toLowerCase();
+      switch (serviceType) {
+        case 'haircut':
+          response.services.haircut = {
+            serviceName: customerService.service.name,
+            additionalRequirement: customerService.hairCutDescription.hairCutDetails,
+          };
+          break;
+        case 'hairwash':
+          response.services.hairWash = {
+            serviceName: customerService.service.name,
+            shampoo: customerService.hairWashDescription?.brand,
+            additionalRequirement: customerService.hairWashDescription.hairWashDetails,
+          };
+          break;
+        case 'hairdye':
+          response.services.hairDye = {
+            serviceName: customerService.service.name,
+            color: customerService.hairDyeDescription?.color,
+            additionalRequirement: customerService.hairDyeDescription.hairDyeDetails,
+          };
+          break;
+        
+      }
+    }
+
+    return response;
+  }
+  
 
   async findOne(id: string): Promise<Booking | null> {
     return await this.bookingRepository.findOne({ where: { bookid : id } });
   }
 
-  async remove(id: string): Promise<Booking> {
-    const customer = await this.findOne(id);
-    if (!customer) {
+  async remove(id: string): Promise<void> {
+    const booking = await this.bookingRepository.findOne({ where: {bookid : id}, relations: ['customerServices', 'customerServices.hairCutDescription', 'customerServices.hairWashDescription', 'customerServices.hairDyeDescription']})
+    if (!booking) {
       throw new NotFoundException();
     }
 
-    return await this.bookingRepository.remove(customer);
+    for (const customerService of booking.customerServices) {
+      if (customerService.hairCutDescription) {
+        await this.hairCutDescriptionRepository.remove(customerService.hairCutDescription);
+      }
+      if (customerService.hairWashDescription) {
+        await this.hairWashDescriptionRepository.remove(customerService.hairWashDescription);
+      }
+      if (customerService.hairDyeDescription) {
+        await this.hairDyeDescriptionRepository.remove(customerService.hairDyeDescription);
+      }
+      await this.customerServiceRepository.remove(customerService);
+    }
+
+    await this.bookingRepository.remove(booking);
   }
 }
 

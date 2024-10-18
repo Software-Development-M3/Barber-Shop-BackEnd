@@ -16,8 +16,8 @@ export class BookingController {
 
   @UseGuards(AuthGuard)
   @Get()
-  findAll() {
-    return this.bookingService.findAll();
+  findAll(@Request() req) {
+    return this.bookingService.findAll(req.user["sub"]);
   }
 
   @Get('search/id/:id')
@@ -27,7 +27,7 @@ export class BookingController {
 
   @UseGuards(AuthGuard)
   @Delete('/:id')
-  remove(@Param('id') bookid: string) {
+  async remove(@Param('id') bookid: string) {
     return this.bookingService.remove(bookid);
   }
 }

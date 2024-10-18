@@ -18,7 +18,7 @@ import {
     @PrimaryGeneratedColumn('uuid')
     csid: string;
   
-    @ManyToOne(() => Booking, booking => booking.customerServices)
+    @ManyToOne(() => Booking, booking => booking.customerServices, {onDelete : 'CASCADE'})
     @JoinColumn({ name: 'bookid' })
     booking: Booking;
   
@@ -29,15 +29,15 @@ import {
     @Column({ nullable: true })
     details: string;
   
-    @OneToOne(() => HairCutDescription, { nullable: true, cascade: true })
+    @OneToOne(() => HairCutDescription, { nullable: true, cascade: true, onDelete : 'CASCADE' })
     @JoinColumn({ name: 'hcdescriptionid' })
     hairCutDescription?: HairCutDescription;
   
-    @OneToOne(() => HairWashDescription, { nullable: true, cascade: true })
+    @OneToOne(() => HairWashDescription, { nullable: true, cascade: true, onDelete : 'CASCADE' })
     @JoinColumn({ name: 'hwdescriptionid' })
     hairWashDescription?: HairWashDescription;
   
-    @OneToOne(() => HairDyeDescription, { nullable: true, cascade: true })
+    @OneToOne(() => HairDyeDescription, { nullable: true, cascade: true, onDelete : 'CASCADE' })
     @JoinColumn({ name: 'hddescriptionid' })
     hairDyeDescription?: HairDyeDescription;
   }

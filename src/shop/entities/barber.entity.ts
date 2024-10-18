@@ -15,6 +15,6 @@ export class Barber {
     @Column({ type: 'varchar', length: 50 })
     specialization: string;
 
-    @ManyToOne(() => Shop, (shop) => shop.barbers)
+    @ManyToOne(() => Shop, (shop) => shop.barbers , {onDelete : "CASCADE"})
     shop: Shop;
 }
