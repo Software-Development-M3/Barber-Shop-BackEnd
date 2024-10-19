@@ -20,6 +20,10 @@ export class CreateShopDto {
     @IsPhoneNumber(PHONE_LOCATION)
     telephone: number;
 
+    @IsNotEmpty()
+    @IsString()
+    image?: string;
+
     @IsArray()
     tags: [];
 
