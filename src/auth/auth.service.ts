@@ -4,12 +4,14 @@ import { JwtService } from "@nestjs/jwt";
 import { LoginDto } from './dto/login.dto';
 import { CreateCustomerDto } from 'src/customer/dto/create-customer.dto';
 import { Customer } from 'src/customer/entities/customer.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
   constructor(
     private customerService: CustomerService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private configService: ConfigService
 ) {}
 
   async register(register: CreateCustomerDto): Promise<{ access_token: string }> {
@@ -17,7 +19,7 @@ export class AuthService {
 
     const payload = { sub: customer.id, name: customer.fullname};
     return {
-        access_token: await this.jwtService.signAsync(payload)
+        access_token: await this.jwtService.signAsync(payload, { secret: this.configService.get('JWT_SECRET') })
     };
   }
 
@@ -32,7 +34,7 @@ export class AuthService {
 
     const payload = { sub: customer.id, name: customer.fullname};
     return {
-        access_token: await this.jwtService.signAsync(payload)
+        access_token: await this.jwtService.signAsync(payload, { secret: this.configService.get('JWT_SECRET') })
     };
   }
 

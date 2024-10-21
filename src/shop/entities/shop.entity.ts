@@ -19,6 +19,9 @@ export class Shop {
   @Column({ type: 'varchar', length: 20 })
   telephone: number;
 
+  @Column({ type: 'varchar', length: 500 })
+  image: string;
+
   @Column({ type: 'varchar', length: 100 })
   tags: [];
 

@@ -22,6 +22,10 @@ export class UpdateShopDto {
     telephone?: number;
 
     @IsOptional()
+    @IsString()
+    image?: string;
+
+    @IsOptional()
     @IsArray()
     tags?: [];
 

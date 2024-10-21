@@ -36,11 +36,6 @@ export class ShopController {
     return this.shopService.findOne(id);
   }
 
-  @Get('service/:shopid')
-  async findServicesByShopId(@Param('shopid') shopId: string) {
-    return this.shopService.getServicesByShopId(shopId);
-  }
-
   @Delete('delete/id/:id')
   remove(@Param('id') id: string) {
     return this.shopService.remove(id);

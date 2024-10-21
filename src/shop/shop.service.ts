@@ -6,8 +6,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Shop } from './entities/shop.entity';
 import { Barber } from './entities/barber.entity'; 
 import { Service } from './entities/service.entity';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { ServiceType } from './entities/service-type.entity';
+
 
 @Injectable()
 export class ShopService {
@@ -143,11 +144,13 @@ export class ShopService {
   }
 
   async findAll(): Promise<Shop[]> {
-    return await this.shopRepository.find({ relations: ['barbers' , 'services']}); 
+    return await this.shopRepository.find({ }); 
+    // relations: ['barbers' , 'services']
   }
 
   async findOne(id: string): Promise<Shop | null> {
-    return await this.shopRepository.findOne({ where: { id }, relations: ['barbers','services'] }); 
+    return await this.shopRepository.findOne({ where: { id } , relations: ['barbers','services']}); 
+    
   }
 
   async getServicesByShopId(shopId: string): Promise<any> {
@@ -190,6 +193,13 @@ export class ShopService {
     return serviceMap;
 }
 
+  async findByName(name: string): Promise<Shop[] | null> {
+    return await this.shopRepository.find({
+      where: { name: ILike(`%${name}%`) },
+      // relations: ['barbers', 'services'], 
+    });
+  }
+  
 
   
   async remove(id: string): Promise<Shop> {
