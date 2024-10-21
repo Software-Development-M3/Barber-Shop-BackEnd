@@ -37,7 +37,7 @@ import { CustomerServices } from './customerservice.entity';
     totalPrice: number;
   
     @OneToMany(() => CustomerServices, customerService => customerService.booking, {
-      onDelete: 'CASCADE',
+      cascade: true,
     })
     customerServices: CustomerServices[];
   }

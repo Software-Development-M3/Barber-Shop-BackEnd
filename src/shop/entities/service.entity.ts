@@ -19,6 +19,6 @@ export class Service {
     @ManyToOne(() => ServiceType, serviceType => serviceType.services, { eager: true, nullable: false })
     serviceType: ServiceType;
 
-    @ManyToOne(() => Shop, (shop) => shop.services , {onDelete : 'CASCADE'})
+    @ManyToOne(() => Shop, (shop) => shop.services)
     shop: Shop;
 }
