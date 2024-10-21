@@ -165,8 +165,8 @@ export class ShopService {
 
     // Structure the response
     const serviceMap = {};
-    const colors = ["ทอง", "เขียว", "แดง"]
-    const shampoos = ["L'OREAL Paris", "Herbal Esesences", "ดอกบัวขี้"]
+    // const colors = ["ทอง", "เขียว", "แดง"]
+    // const shampoos = ["L'OREAL Paris", "Herbal Esesences", "ดอกบัวขี้"]
     for (const service of shop.services) {
         const serviceTypeName = service.serviceType.name.toLowerCase().replace(/\s+/g, ''); // Normalize service type name
 
@@ -187,8 +187,8 @@ export class ShopService {
         
     }
     //mockup ข้อมูลมานะ ทำต่อด้วย
-    serviceMap["colors"] = colors
-    serviceMap["shamposs"] = shampoos
+    serviceMap["colors"] = shop.colors
+    serviceMap["shampoos"] = shop.shampoos
 
     return serviceMap;
 }

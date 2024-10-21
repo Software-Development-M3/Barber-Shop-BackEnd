@@ -42,4 +42,10 @@ export class CreateShopDto {
     @ValidateNested({ each: true })
     @Type(() => CreateServiceDto)
     services: CreateServiceDto[];
+
+    @IsArray()
+    colors: [];
+
+    @IsArray()
+    shampoos: [];
 }

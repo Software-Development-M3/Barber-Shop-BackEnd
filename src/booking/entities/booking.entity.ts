@@ -36,8 +36,6 @@ import { CustomerServices } from './customerservice.entity';
     @Column()
     totalPrice: number;
   
-    @OneToMany(() => CustomerServices, customerService => customerService.booking, {
-      cascade: true,
-    })
+    @OneToMany(() => CustomerServices, customerService => customerService.booking, {onDelete: 'CASCADE',})
     customerServices: CustomerServices[];
   }

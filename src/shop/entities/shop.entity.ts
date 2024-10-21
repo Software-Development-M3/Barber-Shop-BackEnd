@@ -31,9 +31,15 @@ export class Shop {
   @Column({ type: 'varchar', length: 20 })
   timeClose: string;
 
-  @OneToMany(() => Barber, (barber) => barber.shop)
+  @OneToMany(() => Barber, (barber) => barber.shop , {onDelete : "CASCADE"})
   barbers: Barber[];
 
-  @OneToMany(() => Service, (service) => service.shop)
+  @OneToMany(() => Service, (service) => service.shop, {onDelete : "CASCADE"})
   services: Service[];
+
+  @Column({ type: 'varchar', length: 100 })
+  colors: [];
+
+  @Column({ type: 'varchar', length: 100 })
+  shampoos: [];
 }
