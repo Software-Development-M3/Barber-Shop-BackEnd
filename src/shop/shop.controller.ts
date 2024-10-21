@@ -14,7 +14,7 @@ export class ShopController {
     return this.shopService.create(createShopDto);
   }
 
-  @Post(':shopId/service')
+  @Post('service/:shopId')
   @UsePipes(ValidationPipe)
   addService(@Param('shopId') shopId: string, @Body() createServiceDto: CreateServiceDto) {
     return this.shopService.addService(shopId, createServiceDto);
@@ -36,18 +36,23 @@ export class ShopController {
     return this.shopService.findOne(id);
   }
 
-  @Get('search/name/:name')
-  findbyname(@Param('name') name: string) {
-    return this.shopService.findByName(name);
-  }
-
   @Delete('delete/id/:id')
   remove(@Param('id') id: string) {
     return this.shopService.remove(id);
   }
 
+  @Get('service/:shopid')
+  async findServicesByShopId(@Param('shopid') shopId: string) {
+    return this.shopService.getServicesByShopId(shopId);
+  }
+
+  @Get('search/name/:name')
+  findbyname(@Param('name') name: string) {
+    return this.shopService.findByName(name);
+  }
+
   @Delete(':shopId/service/:serviceId')
-  removeService(@Param('shopId') shopId: string, @Param('serviceId') serviceId: string) {
+  removeService(@Param('shopId') shopId: string, @Param('serviceId') serviceId: number) {
     return this.shopService.removeService(shopId, serviceId);
   }
 

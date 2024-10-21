@@ -2,7 +2,7 @@ import { IsNotEmpty, IsPhoneNumber, IsString, ValidateNested, IsArray, IsOptiona
 import { Type } from "class-transformer";
 import { PHONE_LOCATION } from "src/utils/constants";
 import { CreateBarberDto } from "./create-barber.dto";
-import { CreateServiceDto } from './create-service.dto';
+import { CreateServiceDto } from "./create-service.dto";
 
 export class UpdateShopDto {
     @IsOptional()
@@ -48,4 +48,12 @@ export class UpdateShopDto {
     @ValidateNested({ each: true })
     @Type(() => CreateServiceDto)
     services?: CreateServiceDto[];
+
+    @IsOptional()
+    @IsArray()
+    colors: [];
+
+    @IsOptional()
+    @IsArray()
+    shampoos: [];
 }
