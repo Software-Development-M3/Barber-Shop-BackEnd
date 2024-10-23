@@ -11,6 +11,7 @@ import { Shop } from 'src/shop/entities/shop.entity';
 import { Barber } from 'src/shop/entities/barber.entity';
 import { CreateBookingDto } from './dto/creater-booking.dto';
 import { Customer } from 'src/customer/entities/customer.entity';
+import { ServiceType } from 'src/utils/servicetype';
 
 @Injectable()
 export class BookingService {
@@ -185,31 +186,28 @@ export class BookingService {
       date: booking.startTime.split('T')[0], // Assuming the date format is 'YYYY-MM-DDTHH:MM:SS'
       startTime: booking.startTime,
       endTime: booking.endTime,
-      services: {
-        haircut: {},
-        hairWash: {},
-        hairDye: {},
-      },
+      services: { },
     };
 
     for (const customerService of booking.customerServices) {
-      const serviceType = customerService.service.serviceType.name.toLowerCase();
+      const serviceTypeName = ServiceType[customerService.service.serviceTypeId].toLowerCase().replace(/\s+/g, '');
+      const serviceType = customerService.service.serviceTypeId;
       switch (serviceType) {
-        case 'haircut':
-          response.services.haircut = {
+        case 1:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             additionalRequirement: customerService.hairCutDescription.hairCutDetails,
           };
           break;
-        case 'hairwash':
-          response.services.hairWash = {
+        case 2:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             shampoo: customerService.hairWashDescription?.brand,
             additionalRequirement: customerService.hairWashDescription.hairWashDetails,
           };
           break;
-        case 'hairdye':
-          response.services.hairDye = {
+        case 3:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             color: customerService.hairDyeDescription?.color,
             additionalRequirement: customerService.hairDyeDescription.hairDyeDetails,

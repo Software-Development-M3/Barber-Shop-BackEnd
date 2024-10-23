@@ -31,7 +31,7 @@ export class ShopController {
     return this.shopService.findAll();
   }
 
-  @Get('search/id/:id')
+  @Get(':id')
   findOne(@Param('id') id: string) {
     return this.shopService.findOne(id);
   }
@@ -44,6 +44,21 @@ export class ShopController {
   @Get('service/:shopid')
   async findServicesByShopId(@Param('shopid') shopId: string) {
     return this.shopService.getServicesByShopId(shopId);
+  }
+
+  @Get('barber/:shopid')
+  async findBarbersByShopId(@Param('shopid') shopId: string) {
+    return this.shopService.getBarbersByShopId(shopId);
+  }
+
+  @Get('schedule/:shopid')
+  async findBookingsByShopId(@Param('shopid') shopId: string) {
+    return this.shopService.getScheduleByShopId(shopId);
+  }
+
+  @Get('schedule/available/:shopid')
+  async getAvailableBookingTime(@Param('shopid') shopId: string) {
+    return this.shopService.getAvailableBookingTime(shopId);
   }
 
   @Get('search/name/:name')
