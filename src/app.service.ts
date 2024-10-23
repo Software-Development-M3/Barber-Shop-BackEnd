@@ -87,17 +87,12 @@ export class AppService {
     return timeObject;
   }
 
-  getStartEndTime(startTime: string, duration: number): { start: string, end: string, duration: number } {
+  getEndTime(startTime: string, duration: number): string {
     const time = this.deformatDateTimeString(startTime);
-    const start = this.getFormatDateTime(time);
 
     time.setMinutes(time.getMinutes() + duration);
     const end = this.getFormatDateTime(time);
     
-    return { 
-      start: start,
-      end: end,
-      duration: duration
-    };
+    return end;
   }
 }

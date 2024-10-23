@@ -320,7 +320,7 @@ export class ShopService {
             const newFreeSlot = { start: this.appService.getFormatDateTime(start), end: this.appService.getFormatDateTime(end), duration: duration };
             freeSlot.push(newFreeSlot);
 
-            return duration
+            return duration;
           }
           else {
             const durationBeforeBreak = (breakStart.getTime() - start.getTime()) / (1000 * 60);

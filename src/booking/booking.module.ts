@@ -12,6 +12,7 @@ import { Service } from 'src/shop/entities/service.entity';
 import { Shop } from 'src/shop/entities/shop.entity';
 import { Barber } from 'src/shop/entities/barber.entity';
 import { AuthModule } from 'src/auth/auth.module';
+import { AppService } from 'src/app.service';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { AuthModule } from 'src/auth/auth.module';
       Customer,
     ]),AuthModule,
   ],
-  providers: [BookingService],
+  providers: [BookingService, AppService],
   controllers: [BookingController],
 })
 export class BookingModule {}

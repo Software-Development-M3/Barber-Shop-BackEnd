@@ -12,6 +12,7 @@ import { Barber } from 'src/shop/entities/barber.entity';
 import { CreateBookingDto } from './dto/creater-booking.dto';
 import { Customer } from 'src/customer/entities/customer.entity';
 import { ServiceType } from 'src/utils/servicetype';
+import { AppService } from 'src/app.service';
 
 @Injectable()
 export class BookingService {
@@ -34,10 +35,11 @@ export class BookingService {
     private readonly barberRepository: Repository<Barber>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    private readonly appService: AppService,
   ) {}
 
   async createBooking(createBookingDto: CreateBookingDto, reqid : string ): Promise<Booking> {
-    const { shopId, services, barberId, price, timeTotal, date, startTime, endTime } = createBookingDto;
+    const { shopId, services, barberId, startTime, } = createBookingDto;
   
     // Find the shop using shopId (UUID)
     const shop = await this.shopRepository.findOne({ where: { id: shopId } }); // 'id' matches Shop entity
@@ -59,9 +61,9 @@ export class BookingService {
       customer: customer,
       barber:barber,
       startTime: startTime,
-      endTime: endTime, // Ensure date is formatted correctly
-      totalDuration: timeTotal,
-      totalPrice: price,
+      endTime: startTime, // Ensure date is formatted correctly
+      totalDuration: 0,
+      totalPrice: 0,
     });
   
     const savedBooking = await this.bookingRepository.save(booking);
@@ -86,6 +88,9 @@ export class BookingService {
         service,
         hairCutDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
     }
   
@@ -107,6 +112,9 @@ export class BookingService {
         service,
         hairWashDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
     }
   
@@ -128,13 +136,16 @@ export class BookingService {
         service,
         hairDyeDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
     }
   
     // Save all customer services
     await this.customerServiceRepository.save(customerServices);
   
-    return savedBooking;
+    return await this.bookingRepository.save(savedBooking);
   }
   
   async getBooking(id: string): Promise<any> {
