@@ -14,5 +14,6 @@ export class CreateServiceDto {
   price: number;
 
   @IsNotEmpty()
+  @IsInt()
   serviceTypeId: number;
 }

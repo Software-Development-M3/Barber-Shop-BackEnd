@@ -7,7 +7,8 @@ import { Shop } from './entities/shop.entity';
 import { Barber } from './entities/barber.entity'; 
 import { Service } from './entities/service.entity';
 import { ILike, Repository } from 'typeorm';
-import { ServiceType } from './entities/service-type.entity';
+import { ServiceType } from 'src/utils/servicetype';
+import { AppService } from 'src/app.service';
 
 
 @Injectable()
@@ -16,7 +17,7 @@ export class ShopService {
     @InjectRepository(Shop) private readonly shopRepository: Repository<Shop>,
     @InjectRepository(Service) private readonly serviceRepository: Repository<Service>,
     @InjectRepository(Barber) private readonly barberRepository: Repository<Barber>, 
-    @InjectRepository(ServiceType) private readonly serviceTypeRepository: Repository<ServiceType>,
+    private readonly appService: AppService,
   ) {}
 
   async create(createShopDto: CreateShopDto): Promise<Shop> {
@@ -36,15 +37,10 @@ export class ShopService {
     if (services && services.length > 0) {
       const serviceEntities = await Promise.all(
         services.map(async (createServiceDto) => {
-          const serviceType = await this.serviceTypeRepository.findOne({
-            where: { id: createServiceDto.serviceTypeId },
-          });
-
-          if (!serviceType) {
+          if (!ServiceType.hasOwnProperty(createServiceDto.serviceTypeId)) {
             throw new NotFoundException('ServiceType not found');
           }
-
-          const service = this.serviceRepository.create({ ...createServiceDto, serviceType, shop: savedShop });
+          const service = this.serviceRepository.create({ ...createServiceDto, shop: savedShop });
           return service;
         }),
       );
@@ -91,16 +87,15 @@ export class ShopService {
       }
       const updatedServices = services.map(async createserviceDto => {
         const existingService = shop.services.find(service => service.name === createserviceDto.name);
-        const serviceType = await this.serviceTypeRepository.findOne({ where: { id: createserviceDto.serviceTypeId } });
-        if (!serviceType) {
+        if (!ServiceType.hasOwnProperty(createserviceDto.serviceTypeId)) {
           throw new NotFoundException('ServiceType not found');
         }
         if (existingService) {
           const {name,duration,price,serviceTypeId} = createserviceDto;
-          Object.assign(existingService, { name, duration, price, serviceType });
+          Object.assign(existingService, { name, duration, price, serviceTypeId });
           return await this.serviceRepository.save(existingService);
         } else {
-          return this.serviceRepository.create({ ...createserviceDto,serviceType, shop: updatedShop });
+          return this.serviceRepository.create({ ...createserviceDto, shop: updatedShop });
         }
       });
       await this.serviceRepository.save(await Promise.all(updatedServices));
@@ -117,15 +112,11 @@ export class ShopService {
       throw new NotFoundException('Shop not found');
     }
 
-    const serviceType = await this.serviceTypeRepository.findOne({
-      where: { id: createServiceDto.serviceTypeId },
-    });
-
-    if (!serviceType) {
+    if (!ServiceType.hasOwnProperty(createServiceDto.serviceTypeId)) {
       throw new NotFoundException('ServiceType not found');
     }
 
-    const service = this.serviceRepository.create({ ...createServiceDto, serviceType, shop });
+    const service = this.serviceRepository.create({ ...createServiceDto, shop });
     return this.serviceRepository.save(service);
   }
 
@@ -149,14 +140,14 @@ export class ShopService {
   }
 
   async findOne(id: string): Promise<Shop | null> {
-    return await this.shopRepository.findOne({ where: { id } , relations: ['barbers','services']}); 
+    return await this.shopRepository.findOne({ where: { id } , relations: ['barbers','services', 'bookings']}); 
     
   }
 
   async getServicesByShopId(shopId: string): Promise<any> {
     const shop = await this.shopRepository.findOne({
         where: { id: shopId },
-        relations: ['services', 'services.serviceType']
+        relations: ['services']
     });
 
     if (!shop) {
@@ -168,7 +159,7 @@ export class ShopService {
     // const colors = ["ทอง", "เขียว", "แดง"]
     // const shampoos = ["L'OREAL Paris", "Herbal Esesences", "ดอกบัวขี้"]
     for (const service of shop.services) {
-        const serviceTypeName = service.serviceType.name.toLowerCase().replace(/\s+/g, ''); // Normalize service type name
+        const serviceTypeName = ServiceType[service.serviceTypeId].toLowerCase().replace(/\s+/g, ''); // Normalize service type name
 
         // Initialize the service type array if it doesn't exist
         if (!serviceMap[serviceTypeName]) {
@@ -179,7 +170,7 @@ export class ShopService {
         serviceMap[serviceTypeName].push({
             serviceId: service.id,
             serviceName: service.name,
-            time: service.duration,
+            duration: service.duration,
             price: service.price
         });
         
@@ -193,14 +184,74 @@ export class ShopService {
     return serviceMap;
 }
 
+  async getBarbersByShopId(shopId: string): Promise<Array<Barber>> {
+    const shop = await this.shopRepository.findOne({
+      where: { id: shopId },
+      relations: ['barbers']
+    });
+
+    if (!shop) {
+        throw new NotFoundException('Shop not found');
+    }
+
+    return shop.barbers;
+  }
+
+  async getScheduleByShopId(shopId: string): Promise<{
+    [date: string]: {
+      [barber: string]: Array<{
+        bookid: string;
+        startTime: string;
+        endTime: string;
+        totalDuration: number;
+        serviceType: string[];
+        serviceName: string[];
+      }>;
+    };
+  }> {
+    const shop = await this.shopRepository.findOne({
+      where: { id: shopId },
+      relations: ['barbers', 'bookings', 'bookings.barber', 'bookings.customerServices', 'bookings.customerServices.service']
+    });
+
+    if (!shop) {
+        throw new NotFoundException('Shop not found');
+    }
+
+    const scheduleMap = { };
+    const week = this.appService.getWeek();
+    for (const date of week) {
+      scheduleMap[date] = { };
+      for (const barber of shop.barbers) {
+        scheduleMap[date][barber.name] = [];
+      }
+    }
+
+    for (const booking of shop.bookings) {
+      const bookdate = booking.startTime.split('T')[0];
+      const barber = booking.barber.name;
+      
+      if (scheduleMap[bookdate]) {
+        scheduleMap[bookdate][barber].push({
+          bookid: booking.bookid,
+          startTime: booking.startTime,
+          endTime: booking.endTime,
+          totalDuration: booking.totalDuration,
+          serviceType: booking.customerServices.map(serv => ServiceType[serv.service.serviceTypeId]),
+          serviceName: booking.customerServices.map(serv => serv.service.name),
+        });
+      }
+    }
+
+    return scheduleMap;
+  }
+
   async findByName(name: string): Promise<Shop[] | null> {
     return await this.shopRepository.find({
       where: { name: ILike(`%${name}%`) },
       // relations: ['barbers', 'services'], 
     });
   }
-  
-
   
   async remove(id: string): Promise<Shop> {
     const shop = await this.findOne(id);
@@ -225,5 +276,87 @@ export class ShopService {
     await this.barberRepository.remove(barber);
   }
 
+  async getAvailableBookingTime(
+    shopId: string, breakStartString: string="12:00", breakEndString: string="13:00") : Promise<{
+      [date: string]: {
+        [barber: string]: Array<{ 
+          longestFreeDuration: number, 
+          freeSlot: Array<{ 
+            start: string, 
+            end: string, 
+            duration: number 
+        }>;
+      }>;
+    }
+  }>
+  {
+    const shopSchedule = await this.getScheduleByShopId(shopId);
+    const shop = await this.shopRepository.findOne({ where: { id: shopId } });
+
+    const freeSchedule = { };
+
+    for (const date in shopSchedule) {
+      freeSchedule[date] = { };
+      const thisDate = this.appService.deformatDateString(date);
+      const openTime = this.appService.deformatTimeString(shop.timeOpen, thisDate);
+      const closeTime = this.appService.deformatTimeString(shop.timeClose, thisDate);
+      
+      for (const barber in shopSchedule[date]) {
+        freeSchedule[date][barber] = []
+        const bookings = shopSchedule[date][barber];
+        const timeSlot: Array<{ start: Date, end: Date }> = bookings.map(slot => ({
+          start: this.appService.deformatDateTimeString(slot.startTime),
+          end: this.appService.deformatDateTimeString(slot.endTime),
+        }));
+        timeSlot.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+        const freeSlot: Array<{ start: string, end: string, duration: number }> = [];
+
+        const breakStart = this.appService.deformatTimeString(breakStartString, thisDate);
+        const breakEnd = this.appService.deformatTimeString(breakEndString, thisDate);
+        const getFreeDuration = (start: Date, end: Date): number => {
+          if (end <= breakStart || start >= breakEnd) {
+            const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+            const newFreeSlot = { start: this.appService.getFormatDateTime(start), end: this.appService.getFormatDateTime(end), duration: duration };
+            freeSlot.push(newFreeSlot);
+
+            return duration;
+          }
+          else {
+            const durationBeforeBreak = (breakStart.getTime() - start.getTime()) / (1000 * 60);
+            const durationAfterBreak = (end.getTime() - breakEnd.getTime()) / (1000 * 60);
+            if (durationBeforeBreak > 0) {
+              const newFreeSlotBefore = { start: this.appService.getFormatDateTime(start), end: this.appService.getFormatDateTime(breakStart), duration: durationBeforeBreak };
+              freeSlot.push(newFreeSlotBefore);
+            }
+            if (durationAfterBreak > 0) {
+              const newFreeSlotAfter = { start: this.appService.getFormatDateTime(breakEnd), end: this.appService.getFormatDateTime(end), duration: durationAfterBreak };
+              freeSlot.push(newFreeSlotAfter);
+            }
+
+            return Math.max(durationBeforeBreak, durationAfterBreak);
+          }
+        }
+
+        let longestDuration = 0;
+        let lastEndTime = openTime;
+
+        for (const slot of timeSlot) {
+          if (slot.start > lastEndTime) {
+            const freeDuration = getFreeDuration(lastEndTime, slot.start)
+            longestDuration = Math.max(longestDuration, freeDuration);
+          }
+          lastEndTime = slot.end;
+        }
+        if (lastEndTime < closeTime) {
+          const freeDuration = getFreeDuration(lastEndTime, closeTime);
+          longestDuration = Math.max(longestDuration, freeDuration);
+        }
+
+        freeSchedule[date][barber].push({ longestFreeDuration: longestDuration, freeSlot: freeSlot });
+      }
+    }
+    return freeSchedule;
+  }
 
 }

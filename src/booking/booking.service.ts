@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './entities/booking.entity';
@@ -11,6 +11,8 @@ import { Shop } from 'src/shop/entities/shop.entity';
 import { Barber } from 'src/shop/entities/barber.entity';
 import { CreateBookingDto } from './dto/creater-booking.dto';
 import { Customer } from 'src/customer/entities/customer.entity';
+import { ServiceType } from 'src/utils/servicetype';
+import { AppService } from 'src/app.service';
 
 @Injectable()
 export class BookingService {
@@ -33,10 +35,13 @@ export class BookingService {
     private readonly barberRepository: Repository<Barber>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    private readonly appService: AppService,
   ) {}
 
   async createBooking(createBookingDto: CreateBookingDto, reqid : string ): Promise<Booking> {
-    const { shopId, services, barberId, price, timeTotal, date, startTime, endTime } = createBookingDto;
+    const { shopId, services, barberId, startTime, } = createBookingDto;
+    const breakStartString = "12:00";
+    const breakEndString ="13:00";
   
     // Find the shop using shopId (UUID)
     const shop = await this.shopRepository.findOne({ where: { id: shopId } }); // 'id' matches Shop entity
@@ -50,6 +55,17 @@ export class BookingService {
       throw new NotFoundException('Barber not found');
     }
 
+    const DateStart = this.appService.deformatDateTimeString(startTime);
+    if (DateStart < this.appService.deformatTimeString(shop.timeOpen, DateStart)) {
+      throw new BadRequestException('Booking time start before open time');
+    }
+
+    const breakStart = this.appService.deformatTimeString(breakStartString, DateStart);
+    const breakEnd = this.appService.deformatTimeString(breakEndString, DateStart);
+    if (breakStart <= DateStart && breakEnd > DateStart) {
+      throw new BadRequestException('Booking time start inside break time');
+    }
+
     const customer = await this.customerRepository.findOne({ where: { id : reqid}});
   
     // Create a new booking
@@ -58,9 +74,9 @@ export class BookingService {
       customer: customer,
       barber:barber,
       startTime: startTime,
-      endTime: endTime, // Ensure date is formatted correctly
-      totalDuration: timeTotal,
-      totalPrice: price,
+      endTime: startTime, // Ensure date is formatted correctly
+      totalDuration: 0,
+      totalPrice: 0,
     });
   
     const savedBooking = await this.bookingRepository.save(booking);
@@ -85,6 +101,9 @@ export class BookingService {
         service,
         hairCutDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
     }
   
@@ -106,6 +125,9 @@ export class BookingService {
         service,
         hairWashDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
     }
   
@@ -127,13 +149,32 @@ export class BookingService {
         service,
         hairDyeDescription,
       });
+      savedBooking.endTime = this.appService.getEndTime(booking.endTime, service.duration);
+      savedBooking.totalDuration += service.duration;
+      savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
+    }
+
+    const DateEnd = this.appService.deformatDateTimeString(savedBooking.endTime);
+    if (this.appService.deformatTimeString(shop.timeClose, DateStart) < DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time end after close time');
+    }
+
+    if (breakStart < DateEnd && breakEnd >= DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time end inside break time');
+    }
+
+    if (breakStart > DateStart && breakEnd < DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time occupies break time');
     }
   
     // Save all customer services
     await this.customerServiceRepository.save(customerServices);
   
-    return savedBooking;
+    return await this.bookingRepository.save(savedBooking);
   }
   
   async getBooking(id: string): Promise<any> {
@@ -185,31 +226,28 @@ export class BookingService {
       date: booking.startTime.split('T')[0], // Assuming the date format is 'YYYY-MM-DDTHH:MM:SS'
       startTime: booking.startTime,
       endTime: booking.endTime,
-      services: {
-        haircut: {},
-        hairWash: {},
-        hairDye: {},
-      },
+      services: { },
     };
 
     for (const customerService of booking.customerServices) {
-      const serviceType = customerService.service.serviceType.name.toLowerCase();
+      const serviceTypeName = ServiceType[customerService.service.serviceTypeId].toLowerCase().replace(/\s+/g, '');
+      const serviceType = customerService.service.serviceTypeId;
       switch (serviceType) {
-        case 'haircut':
-          response.services.haircut = {
+        case 1:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             additionalRequirement: customerService.hairCutDescription.hairCutDetails,
           };
           break;
-        case 'hairwash':
-          response.services.hairWash = {
+        case 2:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             shampoo: customerService.hairWashDescription?.brand,
             additionalRequirement: customerService.hairWashDescription.hairWashDetails,
           };
           break;
-        case 'hairdye':
-          response.services.hairDye = {
+        case 3:
+          response.services[serviceTypeName] = {
             serviceName: customerService.service.name,
             color: customerService.hairDyeDescription?.color,
             additionalRequirement: customerService.hairDyeDescription.hairDyeDetails,

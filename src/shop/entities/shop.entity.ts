@@ -1,6 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { Barber } from './barber.entity';
 import { Service } from './service.entity';
+import { Booking } from 'src/booking/entities/booking.entity';
 
 @Entity({ name: 'shop' })
 export class Shop {
@@ -36,6 +37,9 @@ export class Shop {
 
   @OneToMany(() => Service, (service) => service.shop, {onDelete : "CASCADE"})
   services: Service[];
+
+  @OneToMany(() => Booking, (booking) => booking.shop, {onDelete : "CASCADE"})
+  bookings: Booking[];
 
   @Column({ type: 'varchar', length: 100 })
   colors: [];

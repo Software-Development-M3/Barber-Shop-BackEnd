@@ -94,23 +94,8 @@ export class CreateBookingDto {
   @IsString()
   barberId: string;
 
-  @IsNotEmpty() 
-  @IsInt()
-  price: number;
-
-  @IsNotEmpty() 
-  @IsInt()
-  timeTotal: number;
-
-  @IsNotEmpty() 
-  @Matches(/^\d{2}-\d{2}-\d{4}T\d{2}:\d{2}$/)
-  date: string;
-
   @IsNotEmpty()
   @Matches(/^\d{2}-\d{2}-\d{4}T\d{2}:\d{2}$/)
   startTime: string;
 
-  @IsNotEmpty()
-  @Matches(/^\d{2}-\d{2}-\d{4}T\d{2}:\d{2}$/)
-  endTime: string;
 }
