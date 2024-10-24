@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './entities/booking.entity';
@@ -40,6 +40,8 @@ export class BookingService {
 
   async createBooking(createBookingDto: CreateBookingDto, reqid : string ): Promise<Booking> {
     const { shopId, services, barberId, startTime, } = createBookingDto;
+    const breakStartString = "12:00";
+    const breakEndString ="13:00";
   
     // Find the shop using shopId (UUID)
     const shop = await this.shopRepository.findOne({ where: { id: shopId } }); // 'id' matches Shop entity
@@ -51,6 +53,17 @@ export class BookingService {
     const barber = await this.barberRepository.findOne({ where: { id: barberId } }); // 'id' matches Barber entity
     if (!barber) {
       throw new NotFoundException('Barber not found');
+    }
+
+    const DateStart = this.appService.deformatDateTimeString(startTime);
+    if (DateStart < this.appService.deformatTimeString(shop.timeOpen, DateStart)) {
+      throw new BadRequestException('Booking time start before open time');
+    }
+
+    const breakStart = this.appService.deformatTimeString(breakStartString, DateStart);
+    const breakEnd = this.appService.deformatTimeString(breakEndString, DateStart);
+    if (breakStart <= DateStart && breakEnd > DateStart) {
+      throw new BadRequestException('Booking time start inside break time');
     }
 
     const customer = await this.customerRepository.findOne({ where: { id : reqid}});
@@ -140,6 +153,22 @@ export class BookingService {
       savedBooking.totalDuration += service.duration;
       savedBooking.totalPrice += service.price;
       customerServices.push(customerService);
+    }
+
+    const DateEnd = this.appService.deformatDateTimeString(savedBooking.endTime);
+    if (this.appService.deformatTimeString(shop.timeClose, DateStart) < DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time end after close time');
+    }
+
+    if (breakStart < DateEnd && breakEnd >= DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time end inside break time');
+    }
+
+    if (breakStart > DateStart && breakEnd < DateEnd) {
+      await this.bookingRepository.remove(savedBooking);
+      throw new BadRequestException('Booking time occupies break time');
     }
   
     // Save all customer services
