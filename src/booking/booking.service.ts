@@ -87,7 +87,12 @@ export class BookingService {
     if (services.hairCut) {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairCut.serviceId } }); // 'id' matches Service entity
       if (!service) {
+        await this.bookingRepository.remove(savedBooking);
         throw new NotFoundException('Service not found');
+      }
+      if (service.serviceTypeId !== 1) {
+        await this.bookingRepository.remove(savedBooking);
+        throw new BadRequestException(`Service is not ${ServiceType[1]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
       const hairCutDescription = this.hairCutDescriptionRepository.create({
@@ -111,7 +116,12 @@ export class BookingService {
     if (services.hairWash) {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairWash.serviceId } }); // 'id' matches Service entity
       if (!service) {
+        await this.bookingRepository.remove(savedBooking);
         throw new NotFoundException('Service not found');
+      }
+      if (service.serviceTypeId !== 2) {
+        await this.bookingRepository.remove(savedBooking);
+        throw new BadRequestException(`Service is not ${ServiceType[2]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
       const hairWashDescription = this.hairWashDescriptionRepository.create({
@@ -135,7 +145,12 @@ export class BookingService {
     if (services.hairDye) {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairDye.serviceId } }); // 'id' matches Service entity
       if (!service) {
+        await this.bookingRepository.remove(savedBooking);
         throw new NotFoundException('Service not found');
+      }
+      if (service.serviceTypeId !== 3) {
+        await this.bookingRepository.remove(savedBooking);
+        throw new BadRequestException(`Service is not ${ServiceType[3]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
       const hairDyeDescription = this.hairDyeDescriptionRepository.create({
