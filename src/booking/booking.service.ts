@@ -67,14 +67,15 @@ export class BookingService {
     }
 
     const customer = await this.customerRepository.findOne({ where: { id : reqid}});
+    const startTimeString = this.appService.getFormatDateTime(DateStart);
   
     // Create a new booking
     const booking = this.bookingRepository.create({
       shop:shop,
       customer: customer,
       barber:barber,
-      startTime: startTime,
-      endTime: startTime, // Ensure date is formatted correctly
+      startTime: startTimeString,
+      endTime: startTimeString, // Ensure date is formatted correctly
       totalDuration: 0,
       totalPrice: 0,
     });
