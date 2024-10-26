@@ -243,6 +243,7 @@ export class BookingService {
       startTime: booking.startTime,
       endTime: booking.endTime,
       services: { },
+      image: booking.shop.image
     };
 
     for (const customerService of booking.customerServices) {
