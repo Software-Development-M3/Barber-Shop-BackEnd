@@ -23,7 +23,7 @@ export class Shop {
   @Column({ type: 'varchar', length: 500 })
   image: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'simple-array', nullable:true})
   tags: [];
 
   @Column({ type: 'varchar', length: 20 })
@@ -41,9 +41,9 @@ export class Shop {
   @OneToMany(() => Booking, (booking) => booking.shop, {onDelete : "CASCADE"})
   bookings: Booking[];
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'simple-array', nullable:true })
   colors: [];
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'simple-array', nullable:true })
   shampoos: [];
 }
