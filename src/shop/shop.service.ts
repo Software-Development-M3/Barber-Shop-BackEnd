@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateShopDto } from './dto/update-shop.dto';
@@ -18,6 +18,7 @@ export class ShopService {
     @InjectRepository(Service) private readonly serviceRepository: Repository<Service>,
     @InjectRepository(Barber) private readonly barberRepository: Repository<Barber>, 
     private readonly appService: AppService,
+    private readonly logger: Logger
   ) {}
 
   async create(createShopDto: CreateShopDto): Promise<Shop> {
@@ -25,6 +26,7 @@ export class ShopService {
 
     const shop = this.shopRepository.create(shopData);
     const savedShop = await this.shopRepository.save(shop);
+    this.logger.log(`Success: saved ${savedShop.name} shop, id=${shop.id}`);
 
     if (barbers && barbers.length > 0) {
       const barberEntities = barbers.map((barberDto) => {
@@ -32,12 +34,14 @@ export class ShopService {
         return barber;
       });
       await this.barberRepository.save(barberEntities);
+      this.logger.log(`Success: saved ${barberEntities.length} barber entities, id=${barberEntities.map(bar => bar.id).join(', ')}`);
     }
 
     if (services && services.length > 0) {
       const serviceEntities = await Promise.all(
         services.map(async (createServiceDto) => {
           if (!ServiceType.hasOwnProperty(createServiceDto.serviceTypeId)) {
+            this.logger.error(`NotFoundException: ${createServiceDto.name} service, ServiceType not found, id=${createServiceDto.serviceTypeId}`);
             throw new NotFoundException('ServiceType not found');
           }
           const service = this.serviceRepository.create({ ...createServiceDto, shop: savedShop });
@@ -45,6 +49,7 @@ export class ShopService {
         }),
       );
       await this.serviceRepository.save(serviceEntities);
+      this.logger.log(`Success: saved ${serviceEntities.length} service entities, id=${serviceEntities.map(ser => ser.id).join(', ')}`);
     }
 
     return savedShop;
@@ -55,17 +60,20 @@ export class ShopService {
   
     const shop = await this.shopRepository.findOne({ where: { id }, relations: ['barbers', 'services'] });
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${id}`);
       throw new NotFoundException('Shop not found');
     }
   
     Object.assign(shop, shopData);
     const updatedShop = await this.shopRepository.save(shop);
+    this.logger.log(`Success: updated ${updatedShop.name} shop, id=${updatedShop.id}`);
   
     if (barbers) {
       const barberIds = barbers.map(barber => barber.name);
       const barbersToRemove = shop.barbers.filter(barber => !barberIds.includes(barber.name));
       if (barbersToRemove.length > 0) {
         await this.barberRepository.remove(barbersToRemove);
+        this.logger.log(`Success: removed ${barbersToRemove.length} barber entities, id=${barbersToRemove.map(bar => bar.id).join(', ')}`);
       }
       const updatedBarbers = barbers.map(barberDto => {
         const existingBarber = shop.barbers.find(barber => barber.name === barberDto.name);
@@ -77,6 +85,7 @@ export class ShopService {
         }
       });
       await this.barberRepository.save(updatedBarbers);
+      this.logger.log(`Success: updated ${updatedBarbers.length} barber entities, id=${updatedBarbers.map(bar => bar.id).join(', ')}`);
     }
   
     if (services) {
@@ -84,10 +93,12 @@ export class ShopService {
       const servicesToRemove = shop.services.filter(service => !serviceIds.includes(service.name));
       if (servicesToRemove.length > 0) {
         await this.serviceRepository.remove(servicesToRemove);
+        this.logger.log(`Success: removed ${servicesToRemove.length} service entities, id=${servicesToRemove.map(ser => ser.id).join(', ')}`);
       }
       const updatedServices = services.map(async createserviceDto => {
         const existingService = shop.services.find(service => service.name === createserviceDto.name);
         if (!ServiceType.hasOwnProperty(createserviceDto.serviceTypeId)) {
+          this.logger.error(`NotFoundException: ${createserviceDto.name} service, ServiceType not found = id${createserviceDto.serviceTypeId}`);
           throw new NotFoundException('ServiceType not found');
         }
         if (existingService) {
@@ -99,6 +110,7 @@ export class ShopService {
         }
       });
       await this.serviceRepository.save(await Promise.all(updatedServices));
+      this.logger.log(`Success: updated ${updatedServices.length} barber entities`);
     }
   
     return updatedShop;
@@ -109,29 +121,35 @@ export class ShopService {
   async addService(shopId: string, createServiceDto: CreateServiceDto): Promise<Service> {
     const shop = await this.shopRepository.findOne({ where: { id: shopId } });
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
       throw new NotFoundException('Shop not found');
     }
 
     if (!ServiceType.hasOwnProperty(createServiceDto.serviceTypeId)) {
+      this.logger.error(`NotFoundException: ${createServiceDto.name} service, ServiceType not found = id${createServiceDto.serviceTypeId}`);
       throw new NotFoundException('ServiceType not found');
     }
 
     const service = this.serviceRepository.create({ ...createServiceDto, shop });
+    this.logger.log(`Success: saved ${service.name} service entities, id=${service.id}`);
     return this.serviceRepository.save(service);
   }
 
   async removeService(shopId: string, id: number): Promise<void> {
     const shop = await this.shopRepository.findOne({ where: { id: shopId } });
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
       throw new NotFoundException('Shop not found');
     }
 
     const service = await this.serviceRepository.findOne({ where: { id, shop } });
     if (!service) {
+      this.logger.error(`NotFoundException: service not found, id=${id}`);
       throw new NotFoundException('Service not found');
     }
 
     await this.serviceRepository.remove(service);
+    this.logger.log(`Success: removed ${service.name} service, id=${service.id}`);
   }
 
   async findAll(): Promise<Shop[]> {
@@ -151,6 +169,7 @@ export class ShopService {
     });
 
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
         throw new NotFoundException('Shop not found');
     }
 
@@ -191,6 +210,7 @@ export class ShopService {
     });
 
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
         throw new NotFoundException('Shop not found');
     }
 
@@ -215,6 +235,7 @@ export class ShopService {
     });
 
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
         throw new NotFoundException('Shop not found');
     }
 
@@ -262,24 +283,29 @@ export class ShopService {
   async remove(id: string): Promise<Shop> {
     const shop = await this.findOne(id);
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${id}`);
       throw new NotFoundException();
     }
 
+    this.logger.log(`Success: removed ${shop.name} barber, id=${shop.id}`);
     return await this.shopRepository.remove(shop);
   }
 
   async removeBarber(shopId: string, barberId: string): Promise<void> {
     const shop = await this.shopRepository.findOne({ where: { id: shopId }, relations: ['barbers'] });
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
       throw new NotFoundException('Shop not found');
     }
 
     const barber = await this.barberRepository.findOne({ where: { id: barberId, shop } });
     if (!barber) {
+      this.logger.error(`NotFoundException: barber not found, id=${barberId}`);
       throw new NotFoundException('Barber not found in this shop');
     }
 
     await this.barberRepository.remove(barber);
+    this.logger.log(`Success: removed ${barber.name} barber, id=${barber.id}`);
   }
 
   async getAvailableBookingTime(

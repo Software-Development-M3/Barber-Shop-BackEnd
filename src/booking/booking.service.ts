@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking } from './entities/booking.entity';
@@ -36,6 +36,7 @@ export class BookingService {
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
     private readonly appService: AppService,
+    private readonly logger: Logger
   ) {}
 
   async createBooking(createBookingDto: CreateBookingDto, reqid : string ): Promise<Booking> {
@@ -46,23 +47,27 @@ export class BookingService {
     // Find the shop using shopId (UUID)
     const shop = await this.shopRepository.findOne({ where: { id: shopId } }); // 'id' matches Shop entity
     if (!shop) {
+      this.logger.error(`NotFoundException: shop not found, id=${shopId}`);
       throw new NotFoundException('Shop not found');
     }
   
     // Find the barber using barberId (UUID)
     const barber = await this.barberRepository.findOne({ where: { id: barberId } }); // 'id' matches Barber entity
     if (!barber) {
+      this.logger.error(`NotFoundException: barber not found, id=${barberId}`);
       throw new NotFoundException('Barber not found');
     }
 
     const DateStart = this.appService.deformatDateTimeString(startTime);
     if (DateStart < this.appService.deformatTimeString(shop.timeOpen, DateStart)) {
+      this.logger.error(`BadRequestException: Booking time start before open time`);
       throw new BadRequestException('Booking time start before open time');
     }
 
     const breakStart = this.appService.deformatTimeString(breakStartString, DateStart);
     const breakEnd = this.appService.deformatTimeString(breakEndString, DateStart);
     if (breakStart <= DateStart && breakEnd > DateStart) {
+      this.logger.error(`BadRequestException: Booking time start inside break time`);
       throw new BadRequestException('Booking time start inside break time');
     }
 
@@ -89,10 +94,12 @@ export class BookingService {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairCut.serviceId } }); // 'id' matches Service entity
       if (!service) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`NotFoundException: service not found, id=${services.hairCut.serviceId}`);
         throw new NotFoundException('Service not found');
       }
       if (service.serviceTypeId !== 1) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`BadRequestException: service is not ${ServiceType[1]}. It is ${ServiceType[service.serviceTypeId]}`);
         throw new BadRequestException(`Service is not ${ServiceType[1]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
@@ -118,10 +125,12 @@ export class BookingService {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairWash.serviceId } }); // 'id' matches Service entity
       if (!service) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`NotFoundException: service not found, id=${services.hairWash.serviceId}`);
         throw new NotFoundException('Service not found');
       }
       if (service.serviceTypeId !== 2) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`BadRequestException: service is not ${ServiceType[2]}. It is ${ServiceType[service.serviceTypeId]}`);
         throw new BadRequestException(`Service is not ${ServiceType[2]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
@@ -147,10 +156,12 @@ export class BookingService {
       const service = await this.serviceRepository.findOne({ where: { id: services.hairDye.serviceId } }); // 'id' matches Service entity
       if (!service) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`NotFoundException: service not found, id=${services.hairDye.serviceId}`);
         throw new NotFoundException('Service not found');
       }
       if (service.serviceTypeId !== 3) {
         await this.bookingRepository.remove(savedBooking);
+        this.logger.error(`BadRequestException: service is not ${ServiceType[3]}. It is ${ServiceType[service.serviceTypeId]}`);
         throw new BadRequestException(`Service is not ${ServiceType[3]}. It is ${ServiceType[service.serviceTypeId]}.`);
       }
   
@@ -174,22 +185,27 @@ export class BookingService {
     const DateEnd = this.appService.deformatDateTimeString(savedBooking.endTime);
     if (this.appService.deformatTimeString(shop.timeClose, DateStart) < DateEnd) {
       await this.bookingRepository.remove(savedBooking);
+      this.logger.error(`BadRequestException: Booking time end after close time`);
       throw new BadRequestException('Booking time end after close time');
     }
 
     if (breakStart < DateEnd && breakEnd >= DateEnd) {
       await this.bookingRepository.remove(savedBooking);
+      this.logger.error(`BadRequestException: Booking time end inside break time`);
       throw new BadRequestException('Booking time end inside break time');
     }
 
     if (breakStart > DateStart && breakEnd < DateEnd) {
       await this.bookingRepository.remove(savedBooking);
+      this.logger.error(`BadRequestException: Booking time occupies break time`);
       throw new BadRequestException('Booking time occupies break time');
     }
   
     // Save all customer services
     await this.customerServiceRepository.save(customerServices);
+    this.logger.log(`Success: saved ${customerServices.length} customer service entities, id=${customerServices.map(cus => cus.csid).join(', ')}`);
   
+    this.logger.log(`Success: saved ${shop.name} shop booking from ${customer.fullname}, id=${savedBooking.bookid}`);
     return await this.bookingRepository.save(savedBooking);
   }
   
@@ -208,6 +224,7 @@ export class BookingService {
     });
 
     if (!booking) {
+      this.logger.error(`NotFoundException: booking not found, id=${id}`);
       throw new NotFoundException('Booking not found');
     }
 
@@ -284,23 +301,29 @@ export class BookingService {
   async remove(id: string): Promise<void> {
     const booking = await this.bookingRepository.findOne({ where: {bookid : id}, relations: ['customerServices', 'customerServices.hairCutDescription', 'customerServices.hairWashDescription', 'customerServices.hairDyeDescription']})
     if (!booking) {
+      this.logger.error(`NotFoundException: booking not found, id=${id}`);
       throw new NotFoundException();
     }
 
     for (const customerService of booking.customerServices) {
       if (customerService.hairCutDescription) {
         await this.hairCutDescriptionRepository.remove(customerService.hairCutDescription);
+        this.logger.log(`Success: removed hair cut description , id=${customerService.hairCutDescription.hcid}`);
       }
       if (customerService.hairWashDescription) {
         await this.hairWashDescriptionRepository.remove(customerService.hairWashDescription);
+        this.logger.log(`Success: removed hair wash description , id=${customerService.hairWashDescription.hwid}`);
       }
       if (customerService.hairDyeDescription) {
         await this.hairDyeDescriptionRepository.remove(customerService.hairDyeDescription);
+        this.logger.log(`Success: removed hair dye description , id=${customerService.hairDyeDescription.hdid}`);
       }
       await this.customerServiceRepository.remove(customerService);
+      this.logger.log(`Success: removed customer service , id=${customerService.csid}`);
     }
 
     await this.bookingRepository.remove(booking);
+    this.logger.log(`Success: removed booking , id=${booking.bookid}`);
   }
 }
 

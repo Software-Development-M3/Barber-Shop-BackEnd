@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BookingService } from './booking.service';
 import { BookingController } from './booking.controller';
@@ -28,7 +28,7 @@ import { AppService } from 'src/app.service';
       Customer,
     ]),AuthModule,
   ],
-  providers: [BookingService, AppService],
+  providers: [BookingService, AppService, Logger],
   controllers: [BookingController],
 })
 export class BookingModule {}
