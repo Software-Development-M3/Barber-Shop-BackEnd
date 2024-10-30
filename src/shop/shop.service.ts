@@ -218,8 +218,14 @@ export class ShopService {
         throw new NotFoundException('Shop not found');
     }
 
+    var offset = 0;
+    const today = new Date();
+    if (today > this.appService.deformatTimeString(shop.timeClose, today)) {
+      offset = 1;
+    }
+
     const scheduleMap = { };
-    const week = this.appService.getWeek();
+    const week = this.appService.getWeek(offset);
     for (const date of week) {
       scheduleMap[date] = { };
       for (const barber of shop.barbers) {
@@ -294,12 +300,23 @@ export class ShopService {
     const shop = await this.shopRepository.findOne({ where: { id: shopId } });
 
     const freeSchedule = { };
+    const today = new Date();
 
     for (const date in shopSchedule) {
       freeSchedule[date] = { };
       const thisDate = this.appService.deformatDateString(date);
       const openTime = this.appService.deformatTimeString(shop.timeOpen, thisDate);
       const closeTime = this.appService.deformatTimeString(shop.timeClose, thisDate);
+
+      if (today.getDate() === openTime.getDate() && today.getMonth() === openTime.getMonth() && today.getFullYear() === openTime.getFullYear()) {
+        openTime.setHours(today.getHours() + 1);
+        openTime.setMinutes(today.getMinutes());
+
+        if (openTime > closeTime) {
+          openTime.setHours(closeTime.getHours());
+          openTime.setMinutes(closeTime.getMinutes());
+        }
+      }
       
       for (const barber in shopSchedule[date]) {
         freeSchedule[date][barber] = []
@@ -346,7 +363,7 @@ export class ShopService {
             const freeDuration = getFreeDuration(lastEndTime, slot.start)
             longestDuration = Math.max(longestDuration, freeDuration);
           }
-          lastEndTime = slot.end;
+          lastEndTime = slot.end > lastEndTime ? slot.end : lastEndTime;
         }
         if (lastEndTime < closeTime) {
           const freeDuration = getFreeDuration(lastEndTime, closeTime);

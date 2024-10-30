@@ -14,11 +14,11 @@ export class AppService {
     return "Date = " + now;
   }
 
-  getWeek(): Array<string> {
+  getWeek(offset: number = 0): Array<string> {
     const dateArray: string[] = [];
     const time = new Date();
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0+offset; i < 7+offset; i++) {
       const next = new Date(time);
       next.setDate(time.getDate() + i);
       const date = String(next.getDate()).padStart(2, '0');
